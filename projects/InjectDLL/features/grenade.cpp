@@ -108,6 +108,11 @@ namespace
         override_on_ground = false;
     }
 
+    IL2CPP_INTERCEPT(, SeinGrenadeAttack, void, CancelAiming, (app::SeinGrenadeAttack* this_ptr)) {
+        SeinGrenadeAttack::CancelAiming(this_ptr);
+        this_ptr->fields.m_lockPressingInputTime = 0.f;
+    }
+
     IL2CPP_INTERCEPT(, SeinCharacter, bool, get_IsOnGround, (app::SeinCharacter* this_ptr)) {
         if (override_on_ground)
             return true;
