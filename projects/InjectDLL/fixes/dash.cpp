@@ -63,6 +63,12 @@ namespace
 	    return result;
     }
 
+    IL2CPP_INTERCEPT(, SeinDashNew, void, TryPerformDash, (app::SeinDashNew* this_ptr, int dashDirection, bool isForwardDash)) {
+        SeinDashNew::TryPerformDash(this_ptr, dashDirection, isForwardDash);
+        trace(MessageType::Debug, 5, "abilities", "dashed");
+        csharp_bridge::play_sound_file("./assets/audio/f%%.wav");
+    }
+
     IL2CPP_INTERCEPT(Moon.uberSerializationWisp, PlayerUberStateAbilities, void, Save, (app::PlayerUberStateAbilities* this_ptr, app::UberStateArchive* archive, app::PlayerUberStateAbilities* abilities)) {
         bool has_real_dash = has_dash();
         if(PlayerUberStateAbilities::HasAbility(this_ptr, app::AbilityType__Enum_DashNew) && !has_real_dash)

@@ -175,6 +175,9 @@ namespace RandoMainDLL {
     public virtual void Grant(bool skipBase = false) {
       if (!skipBase && Frames > 0 && DisplayName.Length > 0 && !Muted)
         Msg.Pickup(DisplayName, Frames, Pos, Clear, Immediate, Quiet);
+
+      if (DisplayName.EndsWith("Fun"))
+        SoundController.Play("./assets/audio/c.wav");
     }
     public bool Collect(UberStateCondition foundAt) {
       if (NonEmpty) {

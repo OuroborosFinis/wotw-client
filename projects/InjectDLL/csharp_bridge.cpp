@@ -58,6 +58,7 @@ namespace csharp_bridge
     signatures::f_void_float credits_progress = nullptr;
     signatures::f_void shutdown = nullptr;
     signatures::f_void post_initialize = nullptr;
+    signatures::f_void_string play_sound_file = nullptr;
 }
 
 INJECT_C_DLLEXPORT void register_delegate(const char* str, uint64_t ptr)
@@ -160,4 +161,6 @@ INJECT_C_DLLEXPORT void register_delegate(const char* str, uint64_t ptr)
         csharp_bridge::shutdown = reinterpret_cast<f_void>(ptr);
     else if (name == "post_initialize")
         csharp_bridge::post_initialize = reinterpret_cast<f_void>(ptr);
+    else if (name == "play_sound_file")
+        csharp_bridge::play_sound_file = reinterpret_cast<f_void_string>(ptr);
 }

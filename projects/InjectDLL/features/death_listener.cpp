@@ -20,6 +20,8 @@ IL2CPP_INTERCEPT(, SeinDamageReciever, void, OnKill, (app::SeinDamageReciever* t
     auto* go = damage->fields.m_sender;
     const auto name = il2cpp::unity::get_object_name(go);
     SeinDamageReciever::OnKill(this_ptr, damage);
+    if (csharp_bridge::play_sound_file != nullptr)
+        csharp_bridge::play_sound_file("./assets/audio/b.wav");
     if (csharp_bridge::on_player_death != nullptr)
         csharp_bridge::on_player_death(name.c_str(), damage->fields.m_damageType);
 }

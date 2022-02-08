@@ -208,7 +208,11 @@ namespace RandoMainDLL {
           new Method() {
             Delegate = new f_void(Randomizer.PostInitialize),
             CallbackName = "post_initialize"
-          }
+          },
+          new Method() {
+            Delegate = new f_void_str(SoundController.Play),
+            CallbackName = "play_sound_file"
+          },
         };
       }
     }

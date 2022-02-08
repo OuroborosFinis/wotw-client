@@ -3,6 +3,8 @@
 #include <Il2CppModLoader/il2cpp_helpers.h>
 #include <Il2CppModLoader/interception_macros.h>
 
+#include <csharp_bridge.h>
+
 using namespace modloader;
 
 INJECT_C_DLLEXPORT bool in_menu();
@@ -39,6 +41,11 @@ namespace
         }
 
         return aim_timer > 0.0f;
+    }
+
+    IL2CPP_INTERCEPT(, SeinChargeJump, void, Jump, (app::SeinChargeJump* this_ptr, app::Vector2 direction)) {
+        SeinChargeJump::Jump(this_ptr, direction);
+        csharp_bridge::play_sound_file("./assets/audio/lf.wav");
     }
 
     IL2CPP_INTERCEPT(, CharacterAirNoDeceleration, void, UpdateCharacterState, (app::CharacterAirNoDeceleration* this_ptr)) {
