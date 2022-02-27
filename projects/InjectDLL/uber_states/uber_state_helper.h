@@ -44,3 +44,4 @@ INJECT_C_DLLEXPORT app::GameStateMachine_State__Enum get_game_state();
 INJECT_C_DLLEXPORT app::GameWorldAreaID__Enum get_player_area();
 INJECT_C_DLLEXPORT bool is_loading_game();
 INJECT_C_DLLEXPORT UberStateDef* get_uber_states(int& size);
+INJECT_C_DLLEXPORT csharp_bridge::UberStateType get_uber_state_type(int group, int state);

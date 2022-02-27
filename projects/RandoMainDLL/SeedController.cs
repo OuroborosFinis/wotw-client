@@ -240,7 +240,7 @@ namespace RandoMainDLL {
           InterOp.clear_start_position();
         }
 
-        InterOp.System.report_seed_reload();
+        InterOp.IPC.ipc_report_seed_reload();
         if (!init) {
           var flagPart = Flags.Count > 0 ? $"\nFlags: {String.Join(", ", Flags)}" : "";
           Msg.Print($"v{Randomizer.VERSION} - Loaded {SeedName}{flagPart}", 300);

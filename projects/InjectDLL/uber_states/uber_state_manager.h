@@ -1,6 +1,8 @@
 #pragma once
 
 #include <macros.h>
+#include <csharp_bridge.h>
+
 #include <string>
 
 namespace uber_states
@@ -45,6 +47,7 @@ namespace uber_states
 
     // Mainly useful for reevaluating listeners when a state should have changed but it didn't.
     void apply_uber_state_no_notify(app::IUberState* uber_state);
+    void notify_uber_state_change(int group, int state, csharp_bridge::UberStateType type, double prev, double current);
 
     app::UberID* get_uber_state_id(app::IUberState* uber_state);
     app::UberID* get_uber_state_group_id(app::IUberState* uber_state);

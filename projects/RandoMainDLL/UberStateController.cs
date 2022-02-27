@@ -325,7 +325,7 @@ namespace RandoMainDLL {
           Randomizer.Debug($"State change: {state.GroupName}.{state.Name} ({state.GroupID}|{state.ID}) {state.Type} {oldValFmt}->{state.FmtVal()} at ({Math.Round(pos.X)}, {Math.Round(pos.Y)}) in {zone}");
         }
 
-        InterOp.System.report_uber_state_change(state.GroupID, state.ID, state.ValueAsDouble());
+        InterOp.IPC.ipc_report_uber_state_change(state.GroupID, state.ID, state.ValueAsDouble());
         if (shouldTriggerReachableCheck(state, old)) {
           MapController.UpdateReachable();
         }

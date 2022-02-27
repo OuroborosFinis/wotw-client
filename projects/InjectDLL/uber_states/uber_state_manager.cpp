@@ -318,6 +318,11 @@ namespace uber_states
                     add_state<app::SerializedByteUberState>("SerializedByteUberState", constants::RANDO_STATE_GROUP_NAME, constants::RANDO_STATE_GROUP_ID, "Wastes Key Item Hint", 10009, 0),
                     add_state<app::SerializedByteUberState>("SerializedByteUberState", constants::RANDO_STATE_GROUP_NAME, constants::RANDO_STATE_GROUP_ID, "Willow Key Item Hint", 10011, 0),
 
+                    add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::RANDO_STATE_GROUP_NAME, constants::RANDO_STATE_GROUP_ID, "GameID_A", 50000, 0),
+                    add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::RANDO_STATE_GROUP_NAME, constants::RANDO_STATE_GROUP_ID, "GameID_B", 50001, 0),
+                    add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::RANDO_STATE_GROUP_NAME, constants::RANDO_STATE_GROUP_ID, "GameID_C", 50002, 0),
+                    add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::RANDO_STATE_GROUP_NAME, constants::RANDO_STATE_GROUP_ID, "GameID_D", 50003, 0),
+
                     add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::BINGO_STATE_GROUP_NAME, constants::BINGO_STATE_GROUP_ID, "Squares", 0, 0),
                     add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::BINGO_STATE_GROUP_NAME, constants::BINGO_STATE_GROUP_ID, "Lines", 1, 0),
                     add_state<app::SerializedIntUberState>("SerializedIntUberState", constants::BINGO_STATE_GROUP_NAME, constants::BINGO_STATE_GROUP_ID, "Rank", 2, 0),
@@ -481,22 +486,21 @@ namespace uber_states
 
         void notify_uber_state_change(app::IUberState* uber_state, double prev, double current)
         {
-            if (prev == current) return; // :upside_clown:
-            auto uprev = static_cast<int>(prev);
-            auto ucurr = static_cast<int>(current);
+            if (std::abs(prev - current) < 0.001)
+                return;
+
             const auto state = get_uber_state_id(uber_state);
             const auto group = get_uber_state_group_id(uber_state);
             if (group->fields.m_id == 12) {
+                auto uprev = static_cast<int>(prev);
+                auto ucurr = static_cast<int>(current);
                 int delta = uprev ^ ucurr;
                 int real_state = static_cast<int>(log2(delta)) + 31 * state->fields.m_id;
-                if (ucurr > uprev)
-                    csharp_bridge::on_uber_state_applied(12, real_state, 3, 0.0, 1.0);
-                else
-                    csharp_bridge::on_uber_state_applied(12, real_state, 3, 1.0, 0.0);
-                return;
+                uber_states::notify_uber_state_change(12, real_state, csharp_bridge::UberStateType::SerializedBooleanUberState,
+                    ucurr > uprev ? 0.0 : 1.0, ucurr > uprev ? 1.0 : 0.0);
             }
-            auto type = resolve_type(uber_state);
-            csharp_bridge::on_uber_state_applied(group->fields.m_id, state->fields.m_id, static_cast<uint8_t>(type), prev, current);
+            else
+                uber_states::notify_uber_state_change(group->fields.m_id, state->fields.m_id, resolve_type(uber_state), prev, current);
         }
 
         IL2CPP_INTERCEPT(Moon, SerializedBooleanUberState, void, set_Value, (app::SerializedBooleanUberState* this_ptr, bool value)) {
@@ -603,6 +607,14 @@ namespace uber_states
         UberStateController::Apply(uber_state, 0);
         //il2cpp::invoke(il2cpp::get_class<app::UberStateController__Class>("Moon", "UberStateController")
         //    ->static_fields->s_instance, "Apply", uber_state, 0);
+    }
+
+    void notify_uber_state_change(int group, int state, csharp_bridge::UberStateType type, double prev, double current)
+    {
+        if (std::abs(prev - current) < 0.001)
+            return;
+
+        csharp_bridge::on_uber_state_applied(group, state, static_cast<uint8_t>(type), prev, current);
     }
 
     app::UberID* get_uber_state_id(app::IUberState* uber_state) {

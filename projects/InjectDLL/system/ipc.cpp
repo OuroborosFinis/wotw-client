@@ -27,8 +27,6 @@ using namespace modloader;
 
 namespace ipc
 {
-#define SYNCHRONOUS 1
-#if SYNCHRONOUS == 1
     namespace
     {
         constexpr int MESSAGE_SIZE = 8192;
@@ -168,7 +166,18 @@ namespace ipc
     }
 
     using message_handler = void(*)(nlohmann::json& j);
-    std::unordered_map<std::string, message_handler> handlers;
+    std::unordered_map<std::string, message_handler> request_handlers;
+    std::unordered_map<std::string, message_handler> response_handlers;
+
+    int next_request_id = 1;
+    struct RequestData
+    {
+        int id;
+        std::string request;
+        void* callback;
+    };
+
+    std::unordered_map<int, RequestData> active_requests;
 
     void join_ipc_thread()
     {
@@ -188,11 +197,23 @@ namespace ipc
             try
             {
                 auto j = nlohmann::json::parse(message);
-                auto it = handlers.find(j.at("method").get<std::string>());
-                if (it != handlers.end())
-                    it->second(j);
-                else
-                    info("ipc", format("Received unknown action request: %s", message.c_str()));
+                auto type = j.at("type").get<std::string>();
+                if (type == "request")
+                {
+                    auto it = request_handlers.find(j.at("method").get<std::string>());
+                    if (it != request_handlers.end())
+                        it->second(j);
+                    else
+                        info("ipc", format("Received unknown action request: %s", message.c_str()));
+                }
+                else if (type == "response")
+                {
+                    auto it = response_handlers.find(j.at("method").get<std::string>());
+                    if (it != response_handlers.end())
+                        it->second(j);
+                    else
+                        info("ipc", format("Received unknown action request: %s", message.c_str()));
+                }
             }
             catch (std::exception ex)
             {
@@ -213,6 +234,7 @@ namespace ipc
         send_mutex.unlock();
     }
 
+#pragma region Request handlers
     void reload(nlohmann::json& j)
     {
         info("ipc", "Received reload action request.");
@@ -369,159 +391,39 @@ namespace ipc
             text_box_visibility(message_id, p.at("visible").get<bool>());
 
     }
+#pragma endregion
+#pragma region Response handlers
+    void get_stat(nlohmann::json& j)
+    {
+        auto p = j.at("payload");
+        auto id = p.at("id").get<int>();
+        auto it = active_requests.find(id);
+        if (it != active_requests.end())
+        {
+            auto stat = p.at("stat").get<float>();
+            static_cast<get_stat_callback>(it->second.callback)(id, stat);
+        }
+        else
+            warn("ipc", "failed to find get_stat request");
+    }
+#pragma endregion
 
     void initialize()
     {
-        handlers["reload"] = reload;
-        handlers["get_uberstates"] = get_uberstates;
-        handlers["set_uberstate"] = set_uberstate;
-        handlers["get_flags"] = get_flags;
-        handlers["action"] = action;
-        handlers["set_velocity"] = set_velocity;
-        handlers["get_velocity"] = get_velocity;
-        handlers["message"] = message;
+        request_handlers["reload"] = reload;
+        request_handlers["get_uberstates"] = get_uberstates;
+        request_handlers["set_uberstate"] = set_uberstate;
+        request_handlers["get_flags"] = get_flags;
+        request_handlers["action"] = action;
+        request_handlers["set_velocity"] = set_velocity;
+        request_handlers["get_velocity"] = get_velocity;
+        request_handlers["message"] = message;
+
+        response_handlers["get_stat"] = get_stat;
     }
 
     CALL_ON_INIT(initialize);
-#else
-    namespace
-    {
-        enum class State
-        {
-            Initialize,
-            StartConnect,
-            Connected,
-            Reading,
-            ReadFinished,
-            Disconnected,
-            Errored
-        };
 
-        State state = State::Initialize;
-        HANDLE pipe = INVALID_HANDLE_VALUE;
-        DWORD bytes_read;
-        OVERLAPPED overlapped;
-        std::array<char, 64> message;
-
-        void process_message(std::string request)
-        {
-            if (request == "reload")
-            {
-                info("ipc", "Received reload action request.");
-                csharp_bridge::on_action_triggered(input::Action::Reload);
-            }
-        }
-    }
-
-    void update_pipe()
-    {
-        if (state == State::Initialize)
-        {
-            pipe = CreateNamedPipeW(
-                L"\\\\.\\pipe\\wotw_rando",
-                PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
-                PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
-                1,
-                message.size() * sizeof(char),
-                message.size() * sizeof(char),
-                0,
-                nullptr
-            );
-
-            overlapped = {};
-            overlapped.hEvent = CreateEventW(NULL, FALSE, TRUE, NULL);
-            state = State::StartConnect;
-            bytes_read = 0;
-        }
-        else if (state == State::Errored)
-            return;
-
-        int wait = WaitForSingleObject(overlapped.hEvent, 0);
-        if (wait == WAIT_OBJECT_0)
-        {
-            bool blocking = false;
-            while (!blocking)
-            {
-                switch (state)
-                {
-                case State::StartConnect:
-                    info("ipc", "Connecting to pipe.");
-                    if (ConnectNamedPipe(pipe, &overlapped))
-                        state = State::Connected;
-                    else
-                    {
-                        int err = GetLastError();
-                        if (err == ERROR_IO_PENDING)
-                        {
-                            state = State::Connected;
-                            blocking = true;
-                        }
-                        else if (err == ERROR_PIPE_CONNECTED)
-                            state = State::Connected;
-                        else if (err != ERROR_SUCCESS) // waiting for pipe connection.
-                        {
-                            warn("ipc", format("Encountered error while connecting (%d).", err));
-                            state = State::Errored;
-                        }
-                    }
-                    break;
-                case State::Connected:
-                    if (ReadFile(pipe, message.data(), message.size(), &bytes_read, &overlapped))
-                        state = State::ReadFinished;
-                    else
-                    {
-                        int err = GetLastError();
-                        if (err == ERROR_IO_PENDING)
-                        {
-                            state = State::Reading;
-                            blocking = true;
-                        }
-                        else if (err == ERROR_BROKEN_PIPE)
-                            state = State::Disconnected;
-                        else
-                        {
-                            warn("ipc", format("Encountered error while starting read (%d).", err));
-                            state = State::Errored;
-                        }
-                    }
-                    break;
-                case State::Reading:
-                    if (GetOverlappedResult(pipe, &overlapped, &bytes_read, TRUE))
-                        state = State::ReadFinished;
-                    else
-                    {
-                        int err = GetLastError();
-                        if (err == ERROR_BROKEN_PIPE)
-                            state = State::Disconnected;
-                        else
-                        {
-                            warn("ipc", format("Encountered error while reading (%d).", err));
-                            state = State::Errored;
-                        }
-                    }
-                    break;
-                case State::ReadFinished:
-                    info("ipc", "Command read from pipe.");
-                    message[bytes_read + 1] = '\0';
-                    process_message(message.data());
-                    state = State::Connected;
-                    break;
-                case State::Disconnected:
-                    info("ipc", "Pipe disconnected.");
-                    DisconnectNamedPipe(pipe);
-                    state = State::StartConnect;
-                    break;
-                }
-            }
-        }
-        else if (wait != WAIT_TIMEOUT)
-        {
-            warn("ipc", format("Encountered error while waiting (%d).", wait));
-            state = State::Errored;
-        }
-    }
-#endif
-    
     NLOHMANN_JSON_SERIALIZE_ENUM(ScreenPosition, {
         { ScreenPosition::TopLeft, "TopLeft" },
         { ScreenPosition::TopCenter, "TopCenter" },
@@ -554,29 +456,52 @@ namespace ipc
     });
 }
 
-INJECT_C_DLLEXPORT void report_seed_reload()
+INJECT_C_DLLEXPORT int ipc_get_stat(const char* stat, ipc::get_stat_callback callback)
 {
-    nlohmann::json response;
-    response["type"] = "request";
-    response["method"] = "notify_on_reload";
-    ipc::send_message(response.dump());
+    if (callback == nullptr)
+    {
+        trace(MessageType::Error, 1, "ipc", "called ipc_request_stat with no callback, ignoring.");
+        return -1;
+    }
+
+    auto request_id = ipc::next_request_id++;
+    ipc::active_requests[request_id] = {
+        request_id,
+        "get_stat",
+        callback
+    };
+
+    nlohmann::json request;
+    request["type"] = "request";
+    request["method"] = "get_stat";
+    request["stat"] = stat;
+    ipc::send_message(request.dump());
+    return request_id;
 }
 
-INJECT_C_DLLEXPORT void report_load()
+INJECT_C_DLLEXPORT void ipc_report_seed_reload()
 {
-    nlohmann::json response;
-    response["type"] = "request";
-    response["method"] = "notify_on_load";
-    ipc::send_message(response.dump());
+    nlohmann::json request;
+    request["type"] = "request";
+    request["method"] = "notify_on_reload";
+    ipc::send_message(request.dump());
 }
 
-INJECT_C_DLLEXPORT void report_uber_state_change(int group, int state, double value)
+INJECT_C_DLLEXPORT void ipc_report_load()
 {
-    nlohmann::json response;
-    response["type"] = "request";
-    response["method"] = "notify_on_uber_state_changed";
-    response["payload"]["group"] = group;
-    response["payload"]["state"] = state;
-    response["payload"]["value"] = value;
-    ipc::send_message(response.dump());
+    nlohmann::json request;
+    request["type"] = "request";
+    request["method"] = "notify_on_load";
+    ipc::send_message(request.dump());
+}
+
+INJECT_C_DLLEXPORT void ipc_report_uber_state_change(int group, int state, double value)
+{
+    nlohmann::json request;
+    request["type"] = "request";
+    request["method"] = "notify_on_uber_state_changed";
+    request["payload"]["group"] = group;
+    request["payload"]["state"] = state;
+    request["payload"]["value"] = value;
+    ipc::send_message(request.dump());
 }

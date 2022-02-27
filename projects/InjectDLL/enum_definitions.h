@@ -4,6 +4,7 @@ namespace csharp_bridge
 {
     enum class UberStateType : uint8_t {
         BooleanUberState,
+        FloatUberState,
         ByteUberState,
         IntUberState,
         SerializedBooleanUberState,

@@ -75,7 +75,7 @@ namespace
         csharp_bridge::UberStateType type;
     };
 
-    std::array<UberStateTypeResolver, 11> resolvers = {
+    std::array<UberStateTypeResolver, 12> resolvers = {
         UberStateTypeResolver{ "Moon", "SerializedBooleanUberState", csharp_bridge::UberStateType::SerializedBooleanUberState },
         UberStateTypeResolver{ "Moon", "SerializedIntUberState", csharp_bridge::UberStateType::SerializedIntUberState },
         UberStateTypeResolver{ "Moon", "SerializedFloatUberState", csharp_bridge::UberStateType::SerializedFloatUberState },
@@ -85,6 +85,7 @@ namespace
         UberStateTypeResolver{ "Moon.uberSerializationWisp", "PlayerUberStateDescriptor", csharp_bridge::UberStateType::PlayerUberStateDescriptor },
 
         UberStateTypeResolver{ "Moon", "BooleanUberState", csharp_bridge::UberStateType::BooleanUberState },
+        UberStateTypeResolver{ "Moon", "FloatUberState", csharp_bridge::UberStateType::FloatUberState },
         UberStateTypeResolver{ "Moon", "ByteUberState", csharp_bridge::UberStateType::ByteUberState },
         UberStateTypeResolver{ "Moon", "IntUberState", csharp_bridge::UberStateType::IntUberState },
         UberStateTypeResolver{ "Moon", "CountUberState", csharp_bridge::UberStateType::CountUberState },
@@ -377,7 +378,7 @@ INJECT_C_DLLEXPORT UberStateDef* get_uber_states(int& size)
         def.state_name = temp_string_vector[i * 2].c_str();
         temp_string_vector[i * 2 + 1] = uber_states::get_uber_state_group_name(uber_state);
         def.group_name = temp_string_vector[i * 2 + 1].c_str();
-        def.type = resolve_type(uber_state);
+        def.type = get_uber_state_type(def.state_id, def.group_id);
         temp_vector[i] = def;
     }
 
@@ -389,7 +390,7 @@ INJECT_C_DLLEXPORT csharp_bridge::UberStateType get_uber_state_type(int group, i
 {
     // TODO: Make this better
     if (uber_states::is_virtual_state(group, state))
-        return csharp_bridge::UberStateType::SerializedFloatUberState;
+        return uber_states::get_virtual_type(group, state);
 
     if (group == 12)
         return csharp_bridge::UberStateType::SerializedBooleanUberState;

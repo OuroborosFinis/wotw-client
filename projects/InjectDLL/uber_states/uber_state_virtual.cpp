@@ -28,6 +28,7 @@ namespace uber_states
             using getter = double(*)();
 
             std::string name;
+            csharp_bridge::UberStateType type;
             setter set;
             getter get;
         };
@@ -37,6 +38,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 0),
                 {
                     "Spirit Light",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { set_experience(x); },
                     []() -> double { return get_experience(); }
                 }
@@ -45,6 +47,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 1),
                 {
                     "Gorlek Ore",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { set_ore(x); },
                     []() -> double { return get_ore(); }
                 }
@@ -53,6 +56,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 2),
                 {
                     "Keystones",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { set_keystones(x); },
                     []() -> double { return get_keystones(); }
                 }
@@ -61,6 +65,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 10),
                 {
                     "Max Health",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { set_max_health(static_cast<int32_t>(x)); },
                     []() -> double { return get_max_health(); }
                 }
@@ -69,6 +74,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 11),
                 {
                     "Health",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { set_health(x); },
                     []() -> double { return get_health(); }
                 }
@@ -77,6 +83,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 12),
                 {
                     "Max Energy",
+                    csharp_bridge::UberStateType::FloatUberState,
                     [](double x) { set_max_energy(x); },
                     []() -> double { return get_max_energy(); }
                 }
@@ -85,6 +92,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 13),
                 {
                     "Energy",
+                    csharp_bridge::UberStateType::FloatUberState,
                     [](double x) { set_energy(x); },
                     []() -> double { return get_energy(); }
                 }
@@ -93,6 +101,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 100),
                 {
                     "Debug Enabled",
+                    csharp_bridge::UberStateType::BooleanUberState,
                     [](double x) { set_debug_controls(x > 0.5); },
                     []() -> double { return get_debug_controls() ? 1.0 : 0.0; }
                 }
@@ -101,6 +110,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 110),
                 {
                     "Invert x axis",
+                    csharp_bridge::UberStateType::BooleanUberState,
                     [](double x) { set_axis_inverted(true, x > 0.5); },
                     []() -> double { return get_axis_inverted(true) ? 1.0 : 0.0; }
                 }
@@ -109,6 +119,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 111),
                 {
                     "Invert y axis",
+                    csharp_bridge::UberStateType::BooleanUberState,
                     [](double x) { set_axis_inverted(false, x > 0.5); },
                     []() -> double { return get_axis_inverted(false) ? 1.0 : 0.0; }
                 }
@@ -117,6 +128,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 200),
                 {
                     "Area",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { trace(MessageType::Error, 1, "uber_state_virtual", "Invalid operation: uberstate (15, 200) is read only."); },
                     []() -> double { return static_cast<double>(get_player_area()); }
                 }
@@ -125,6 +137,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 500),
                 {
                     "Total Relics",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { trace(MessageType::Error, 1, "uber_state_virtual", "Invalid operation: uberstate (15, 500) is read only."); },
                     []() -> double { return static_cast<double>(csharp_bridge::get_relic_count(true)); }
                 }
@@ -133,6 +146,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 501),
                 {
                     "Current Relics",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { trace(MessageType::Error, 1, "uber_state_virtual", "Invalid operation: uberstate (15, 501) is read only."); },
                     []() -> double { return static_cast<double>(csharp_bridge::get_relic_count(false)); }
                 }
@@ -141,6 +155,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 502),
                 {
                     "Current Trees",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { trace(MessageType::Error, 1, "uber_state_virtual", "Invalid operation: uberstate (15, 502) is read only."); },
                     []() -> double {
                         return uber_states::get_uber_state_value(0, app::AbilityType__Enum_Sword)
@@ -164,6 +179,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 503),
                 {
                     "Current Wisps",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { trace(MessageType::Error, 1, "uber_state_virtual", "Invalid operation: uberstate (15, 503) is read only."); },
                     []() -> double {
                         return uber_states::get_uber_state_value(28895, 25522) // Reach
@@ -178,6 +194,7 @@ namespace uber_states
                 std::make_pair(constants::RANDO_VIRTUAL_GROUP_ID, 504),
                 {
                     "Current Quests",
+                    csharp_bridge::UberStateType::IntUberState,
                     [](double x) { trace(MessageType::Error, 1, "uber_state_virtual", "Invalid operation: uberstate (15, 504) is read only."); },
                     []() -> double {
                         return static_cast<int>(uber_states::get_uber_state_value(937, 34641) > 3.5)
@@ -212,7 +229,8 @@ namespace uber_states
                 if (it == cached_values.end() || (std::abs(it->second - value) >= 0.1))
                 {
                     cached_values[state.first] = value;
-                    report_uber_state_change(state.first.first, state.first.second, value);
+                    notify_uber_state_change(state.first.first, state.first.second, state.second.type, it->second, value);
+                    ipc_report_uber_state_change(state.first.first, state.first.second, value);
                 }
             }
         }
@@ -221,6 +239,12 @@ namespace uber_states
     bool is_virtual_state(int group, int state)
     {
         return virtual_states.find(std::make_pair(group, state)) != virtual_states.end();
+    }
+
+    csharp_bridge::UberStateType get_virtual_type(int group, int state)
+    {
+        auto it = virtual_states.find(std::make_pair(group, state));
+        return it->second.type;
     }
 
     std::string get_virtual_name(int group, int state)
@@ -249,6 +273,6 @@ namespace uber_states
 
     void virtual_notify_change(int group, int state)
     {
-        report_uber_state_change(group, state, get_virtual_value(group, state));
+        ipc_report_uber_state_change(group, state, get_virtual_value(group, state));
     }
 }

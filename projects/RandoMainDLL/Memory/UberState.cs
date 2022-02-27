@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 namespace RandoMainDLL.Memory {
   public enum UberStateType : byte {
     BooleanUberState,
+    FloatUberState,
     ByteUberState,
     IntUberState,
     SerializedBooleanUberState,

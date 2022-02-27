@@ -10,6 +10,17 @@ namespace RandoMainDLL {
   }
 
   public static class InterOp {
+    public static class IPC {
+      public delegate void get_stat_callback(int id, float stat);
+
+      [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
+      public extern static int ipc_get_stat([MarshalAs(UnmanagedType.LPWStr)] string stat, get_stat_callback callback);
+      [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
+      public extern static void ipc_report_uber_state_change(int group, int state, double value);
+      [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
+      public extern static void ipc_report_seed_reload();
+    }
+
     public static class TextDatabase {
       [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
       public extern static int text_database_reserve_id();
@@ -126,13 +137,6 @@ namespace RandoMainDLL {
       public extern static void refresh_wheel();
       [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
       public extern static void clear_wheels();
-    }
-
-    public static class System {
-      [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
-      public extern static void report_uber_state_change(int group, int state, double value);
-      [DllImport("InjectDll.dll", CallingConvention = CallingConvention.Cdecl)]
-      public extern static void report_seed_reload();
     }
 
     public static class Utils {
