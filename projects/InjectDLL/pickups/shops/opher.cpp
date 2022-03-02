@@ -2,11 +2,11 @@
 #include <Common/ext.h>
 #include <csharp_bridge.h>
 #include <pickups/shops/general.h>
-#include <system\textures.h>
+#include <system/textures.h>
 #include <system/text_database.h>
 #include <uber_states/uber_state_helper.h>
 #include <uber_states/uber_state_manager.h>
-#include <utils\messaging.h>
+#include <utils/messaging.h>
 
 #include <Il2CppModLoader/common.h>
 #include <Il2CppModLoader/il2cpp_helpers.h>
@@ -27,19 +27,31 @@ namespace
         return static_cast<uint16_t>(acq & 0xFF) | (static_cast<uint16_t>(req & 0xFF) << 8);
     }
 
-    std::unordered_map<uint16_t, int> opher_weapon_costs{
-        { opher_key(app::AbilityType__Enum_WaterBreath, 255), 10023 },          // Water breath
-        { opher_key(app::AbilityType__Enum_SpiritSpearSpell, 255), 10074 },     // Spike
-        { opher_key(app::AbilityType__Enum_Hammer, 255), 10098 },               // Hammer
-        { opher_key(255, 255), 10105 },                                         // Fast Travel
-        { opher_key(app::AbilityType__Enum_ChakramSpell, 255), 10106 },         // Shuriken
-        { opher_key(app::AbilityType__Enum_Blaze, 255), 10115 },                // Blaze
-        { opher_key(app::AbilityType__Enum_TurretSpell, 255), 10116 },          // Sentry
-        { opher_key(255, app::AbilityType__Enum_SpiritSpearSpell), 11074 },     // Exploding Spike
-        { opher_key(255, app::AbilityType__Enum_Hammer), 11098 },               // Shock Smash
-        { opher_key(255, app::AbilityType__Enum_ChakramSpell), 11106 },         // Static Shuriken
-        { opher_key(255, app::AbilityType__Enum_Blaze), 11115 },                // Charged Blaze
-        { opher_key(255, app::AbilityType__Enum_TurretSpell), 11116 },          // Rapid Sentry
+    struct OpherData
+    {
+        int id;
+        static_text_entries entry;
+        std::shared_ptr<textures::TextureData> texture;
+    };
+
+    constexpr int COST_ID = 10000;
+    constexpr int LOCKED_ID = 20000;
+    constexpr int VISIBLE_ID = 30000;
+    constexpr int USES_ENERGY_ID = 40000;
+
+    std::unordered_map<uint16_t, OpherData> opher_slots{
+        { opher_key(app::AbilityType__Enum_WaterBreath, 255), { 23, static_text_entries::OpherShopWaterBreath } },       // Water breath
+        { opher_key(app::AbilityType__Enum_SpiritSpearSpell, 255), { 74, static_text_entries::OpherShopSpear } },        // Spike
+        { opher_key(app::AbilityType__Enum_Hammer, 255), { 98, static_text_entries::OpherShopHammer } },                 // Hammer
+        { opher_key(255, 255), { 105, static_text_entries::OpherShopTeleport } },                                         // Fast Travel
+        { opher_key(app::AbilityType__Enum_ChakramSpell, 255), { 106, static_text_entries::OpherShopShuriken } },         // Shuriken
+        { opher_key(app::AbilityType__Enum_Blaze, 255), { 115, static_text_entries::OpherShopBlaze } },                   // Blaze
+        { opher_key(app::AbilityType__Enum_TurretSpell, 255), { 116, static_text_entries::OpherShopSentry } },            // Sentry
+        { opher_key(255, app::AbilityType__Enum_SpiritSpearSpell), { 1074, static_text_entries::OpherShopSpearUpgrade } }, // Exploding Spike
+        { opher_key(255, app::AbilityType__Enum_Hammer), { 1098, static_text_entries::OpherShopHammerUpgrade } },          // Shock Smash
+        { opher_key(255, app::AbilityType__Enum_ChakramSpell), { 1106, static_text_entries::OpherShopShurikenUpgrade } },  // Static Shuriken
+        { opher_key(255, app::AbilityType__Enum_Blaze), { 1115, static_text_entries::OpherShopBlazeUpgrade } },            // Charged Blaze
+        { opher_key(255, app::AbilityType__Enum_TurretSpell), { 1116, static_text_entries::OpherShopSentryUpgrade } },     // Rapid Sentry
     };
 
     IL2CPP_INTERCEPT(, WeaponmasterItem, bool, get_IsOwned, (app::WeaponmasterItem* item))
@@ -67,8 +79,8 @@ namespace
             const auto acq = static_cast<int>(item->fields.Upgrade->fields.AcquiredAbilityType);
             const auto req = static_cast<int>(item->fields.Upgrade->fields.RequiredAbility);
             const auto key = opher_key(acq, req);
-            if (opher_weapon_costs.find(key) != opher_weapon_costs.end())
-                return uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, opher_weapon_costs[opher_key(acq, req)]);
+            if (opher_slots.find(key) != opher_slots.end())
+                return uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, opher_slots[opher_key(acq, req)].id + COST_ID);
 
             return 300; // todo; maybe a bit smarter than this?
         }
@@ -113,8 +125,6 @@ namespace
         }
     }
 
-    std::unordered_map<uint16_t, shops::ShopItem> opher_overrides;
-
     uint16_t get_key(app::WeaponmasterItem* item)
     {
         const auto acquired = static_cast<uint16_t>(item->fields.Upgrade->fields.AcquiredAbilityType);
@@ -131,9 +141,9 @@ namespace
         if (il2cpp::is_assignable(this_ptr, "", "WeaponmasterItem") && this_ptr->fields.Upgrade != nullptr)
         {
             const auto key = get_key(this_ptr);
-            const auto it = opher_overrides.find(key);
-            if (it != opher_overrides.end())
-                return it->second.is_visible;
+            const auto it = opher_slots.find(key);
+            if (it != opher_slots.end())
+                return uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, it->second.id + VISIBLE_ID);
 
             return false;
         }
@@ -146,9 +156,9 @@ namespace
         if (il2cpp::is_assignable(this_ptr, "", "WeaponmasterItem") && this_ptr->fields.Upgrade != nullptr)
         {
             const auto key = get_key(this_ptr);
-            const auto it = opher_overrides.find(key);
-            if (it != opher_overrides.end())
-                return it->second.is_locked;
+            const auto it = opher_slots.find(key);
+            if (it != opher_slots.end())
+                return uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, it->second.id + LOCKED_ID);
             
             return true;
         }
@@ -159,19 +169,19 @@ namespace
     IL2CPP_INTERCEPT(, WeaponmasterItem, bool, get_UsesEnergy, (app::WeaponmasterItem* this_ptr))
     {
         const auto key = get_key(this_ptr);
-        const auto it = opher_overrides.find(key);
-        if (it == opher_overrides.end())
-            return WeaponmasterItem::get_UsesEnergy(this_ptr);
+        const auto it = opher_slots.find(key);
+        if (it != opher_slots.end())
+            return uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, it->second.id + USES_ENERGY_ID);
 
-        return it->second.uses_energy;
+        return false;
     }
 
     IL2CPP_INTERCEPT(, WeaponmasterItem, bool, get_IsAffordable, (app::WeaponmasterItem* this_ptr)) {
         const auto key = get_key(this_ptr);
-        const auto it = opher_weapon_costs.find(key);
-        if (it != opher_weapon_costs.end())
+        const auto it = opher_slots.find(key);
+        if (it != opher_slots.end())
         {
-            auto cost = uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, it->second);
+            auto cost = uber_states::get_uber_state_value(uber_states::constants::OPHER_WEAPON_GROUP_ID, it->second.id + COST_ID);
             return get_experience() >= cost;
         }
 
@@ -205,27 +215,27 @@ namespace shops
     void set_opher_providers(app::WeaponmasterItem* item, app::MessageProvider*& name_provider, app::MessageProvider*& description_provider)
     {
         const auto key = get_key(item);
-        const auto it = opher_overrides.find(key);
-        if (it != opher_overrides.end())
+        const auto it = opher_slots.find(key);
+        if (it != opher_slots.end())
         {
-            name_provider = reinterpret_cast<app::MessageProvider*>(il2cpp::gchandle_target(it->second.name));
-            description_provider = reinterpret_cast<app::MessageProvider*>(il2cpp::gchandle_target(it->second.description));
+            name_provider = text_database::get_provider(*it->second.entry);
+            description_provider = text_database::get_provider(*it->second.entry + 1);
         }
     }
 
     std::shared_ptr<textures::TextureData> get_opher_icon(app::WeaponmasterItem* shop_item)
     {
         const auto key = get_key(shop_item);
-        const auto it = opher_overrides.find(key);
-        if (it != opher_overrides.end() && it->second.texture_data != nullptr)
-            return it->second.texture_data;
+        const auto it = opher_slots.find(key);
+        if (it != opher_slots.end())
+            return it->second.texture;
 
         return nullptr;
     }
 }
 
-INJECT_C_DLLEXPORT void set_opher_item(int acquired, int required, const wchar_t* name, const wchar_t* description, const wchar_t* texture, bool uses_energy, bool is_locked, bool is_visible) {
+INJECT_C_DLLEXPORT void set_opher_icon(int acquired, int required, const wchar_t* texture) {
     const auto key = opher_key(acquired, required);
-    auto& item = opher_overrides[key];
-    set_item(item, name, description, texture, uses_energy, is_locked, is_visible);
+    auto& item = opher_slots[key];
+    item.texture = textures::get_texture(texture);
 }
