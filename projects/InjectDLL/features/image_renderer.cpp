@@ -160,11 +160,49 @@ namespace {
         pos = Camera::ScreenToWorldPoint(ui_camera, &pos);
         pos.z = 0.0f;
     }
-    
+
     STATIC_IL2CPP_BINDING(UnityEngine, Quaternion, app::Quaternion, Euler, (float x, float y, float z));
     IL2CPP_BINDING(UnityEngine, Transform, void, set_position, (app::Transform* this_ptr, app::Vector3* pos));
+    IL2CPP_BINDING(UnityEngine, Transform, app::Vector3, get_position, (app::Transform* this_ptr));
     IL2CPP_BINDING(UnityEngine, Transform, void, set_localScale, (app::Transform* this_ptr, app::Vector3* scale));
     IL2CPP_BINDING(UnityEngine, Transform, void, set_rotation, (app::Transform* this_ptr, app::Quaternion* rot));
+    void create_weird_copy()
+    {
+        auto count = il2cpp::unity::get_scene_count();
+        for (auto i = 0; i < count; ++i)
+        {
+            auto scene = il2cpp::unity::get_scene_at(i);
+            auto roots = il2cpp::unity::get_root_game_objects(scene);
+            for (auto root : roots)
+            {
+                if (il2cpp::unity::get_object_name(root) == "petrifiedOwlFeedingGroundsRevised")
+                {
+                    auto obj = il2cpp::unity::find_child(root, {
+                        "art",
+                        "flattened",
+                        "SmallCell72",
+                        "desertGroundClayCrackG"
+                    });
+
+                    auto new_obj = Object::Instantiate(obj);
+                    auto renderer = il2cpp::unity::get_component<app::Renderer>(new_obj, "UnityEngine", "MeshRenderer");
+                    auto info = shaders::get_info(renderer);
+                    //auto texture = textures::get_texture(L"opher:0");
+                    //texture->apply(renderer);
+
+                    auto new_transform = il2cpp::unity::get_transform(new_obj);
+                    auto transform = il2cpp::unity::get_transform(obj);
+                    auto parent = il2cpp::unity::get_parent(transform);
+                    Transform::set_parent(new_transform, parent);
+                    auto pos = Transform::get_position(transform);
+                    Transform::set_position(new_transform, &pos);
+                    pos.y += 4.0f;
+                    Transform::set_position(transform, &pos);
+                }
+            }
+        }
+    }
+    
     app::Vector4 shader_scale_and_offset{ 0, 0, 1, 1 };
     void update_game_object(Sprite& sprite)
     {
@@ -207,6 +245,10 @@ namespace {
             shaders::UberShaderAPI::SetVector(renderer, app::UberShaderProperty_Vector__Enum_MainTexScaleAndOffset, &shader_scale_and_offset);
             entry.texture_data->apply(renderer);
         }
+
+        auto test = false;
+        if (test)
+            create_weird_copy();
     }
 
     STATIC_IL2CPP_BINDING(, TimeUtility, float, get_deltaTime, ());
@@ -254,6 +296,15 @@ namespace {
         { AnimationEndHandling::Loop, "Loop" },
         { AnimationEndHandling::DeactivateOnEnd, "DeactivateOnEnd" },
     });
+
+    void initialize()
+    {
+        auto id = sprite_create(1965.410889f, -3890.324463f, 0, 0, 1, 1, Layer::Art, AnimationEndHandling::Freeze);
+        sprite_animation_entry(id, 0, 0, 0, 0, 0, 0, 1, L"opher:0");
+        sprite_set_active(id, true);
+    }
+
+    CALL_ON_INIT(initialize);
 }
 
 INJECT_C_DLLEXPORT int sprite_load(const char* path)
