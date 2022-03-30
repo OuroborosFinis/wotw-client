@@ -36,6 +36,13 @@ namespace shaders
     STATIC_IL2CPP_BINDING(, UberShaderAPI, app::Color, GetColor, (app::Renderer* renderer, app::UberShaderProperty_Color__Enum prop));
     STATIC_IL2CPP_BINDING(, UberShaderAPI, float, GetFloat, (app::Renderer* renderer, app::UberShaderProperty_Float__Enum prop));
 
+    STATIC_IL2CPP_BINDING(UnityEngine, Shader, app::Shader*, Find, (app::String* name));
+
+    NAMED_IL2CPP_BINDING_OVERLOAD(UnityEngine, Material, void, .ctor, ctor_shader, (app::Material* this_ptr, app::Shader* shader), (UnityEngine:Shader));
+    NAMED_IL2CPP_BINDING_OVERLOAD(UnityEngine, Material, void, .ctor, ctor, (app::Material* this_ptr, app::Material* other), (UnityEngine:Material));
+    IL2CPP_BINDING(UnityEngine, Material, void, CopyPropertiesFromMaterial, (app::Material* this_ptr, app::Material* other));
+    IL2CPP_BINDING(UnityEngine, Material, app::Shader*, get_shader, (app::Material* this_ptr));
+
     ShaderInfo get_info(app::Renderer* renderer)
     {
         ShaderInfo info;
@@ -85,26 +92,58 @@ namespace shaders
         return info;
     }
 
-    void apply(app::Renderer* renderer, ShaderInfo const& info)
+    void set_info(app::Renderer* renderer, ShaderInfo const& info)
     {
-        for (auto const& pair : info.textures)
+        for (auto texture : info.textures)
         {
-            auto const& value = pair.first;
-            auto const& block = pair.second;
-            UberShaderAPI::SetTextureOffset(renderer, value, &block.offset);
-            UberShaderAPI::SetTextureScale(renderer, value, &block.scale);
-            UberShaderAPI::SetTextureAtlasUVs(renderer, value, &block.uvs);
-            UberShaderAPI::SetTextureScrollRotData(renderer, value, &block.scroll_rot);
-            UberShaderAPI::SetTexture(renderer, value, block.texture);
+            auto type = texture.first;
+            UberShaderAPI::SetTextureOffset(renderer, type, &texture.second.offset);
+            UberShaderAPI::SetTextureScale(renderer, type, &texture.second.scale);
+            UberShaderAPI::SetTextureAtlasUVs(renderer, type, &texture.second.uvs);
+            UberShaderAPI::SetTextureScrollRotData(renderer, type, &texture.second.scroll_rot);
+            UberShaderAPI::SetTexture(renderer, type, &texture.second.texture);
         }
 
-        for (auto const& pair : info.colors)
-            UberShaderAPI::SetColor(renderer, pair.first, &pair.second);
+        for (auto color : info.colors)
+            UberShaderAPI::SetColor(renderer, color.first, &color.second);
 
-        for (auto const& pair : info.vectors)
-            UberShaderAPI::SetVector(renderer, pair.first, &pair.second);
+        for (auto f : info.floats)
+            UberShaderAPI::SetFloat(renderer, f.first, f.second);
 
-        for (auto const& pair : info.floats)
-            UberShaderAPI::SetFloat(renderer, pair.first, pair.second);
+        for (auto v : info.vectors)
+            UberShaderAPI::SetVector(renderer, v.first, &v.second);
+    }
+
+    void apply(app::Renderer* renderer, ShaderInfo const& info)
+    {
+        set_info(renderer, info);
+    }
+
+    void set_shader(app::Renderer* renderer, app::Shader* shader, bool shared)
+    {
+        auto pinfo = shaders::get_info(renderer);
+        auto mat = shared
+            ? shaders::UberShaderAPI::GetSharedMaterial(renderer)
+            : shaders::UberShaderAPI::GetEditableMaterial(renderer);
+        il2cpp::invoke(mat, "set_shader", shader);
+        set_info(renderer, pinfo);
+    }
+
+    app::Material* copy_material(app::Material* source)
+    {
+        auto instanced_material = il2cpp::create_object<app::Material>("UnityEngine", "Material");
+        auto shader = Material::get_shader(source);
+        Material::ctor_shader(instanced_material, shader);
+        Material::CopyPropertiesFromMaterial(instanced_material, source);
+        return instanced_material;
+    }
+
+    void make_material_unique(app::Renderer* renderer)
+    {
+        auto mat = shaders::UberShaderAPI::GetEditableMaterial(renderer);
+        //auto new_mat = il2cpp::create_object<app::Material>("UnityEngine", "Material");
+        //il2cpp::invoke(new_mat, ".ctor", mat);
+        auto new_mat = copy_material(mat);
+        il2cpp::invoke(renderer, "set_material", new_mat);
     }
 }

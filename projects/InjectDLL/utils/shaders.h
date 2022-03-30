@@ -43,6 +43,11 @@ namespace shaders
     DECLARE_BINDING(, UberShaderAPI, app::Color, GetColor, (app::Renderer* renderer, app::UberShaderProperty_Color__Enum prop));
     DECLARE_BINDING(, UberShaderAPI, float, GetFloat, (app::Renderer* renderer, app::UberShaderProperty_Float__Enum prop));
 
+    DECLARE_BINDING(UnityEngine, Shader, app::Shader*, Find, (app::String* name));
+
     ShaderInfo get_info(app::Renderer* renderer);
+    void set_info(app::Renderer* renderer, ShaderInfo const& info);
+    void set_shader(app::Renderer* renderer, app::Shader* shader, bool shared = false);
     void set_color(app::GameObject* go, app::Color& color);
+    void make_material_unique(app::Renderer* renderer);
 }

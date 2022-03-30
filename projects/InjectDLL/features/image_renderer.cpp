@@ -50,7 +50,6 @@ namespace {
     std::unordered_map<std::string, Sprite> loaded_sprites;
     std::unordered_map<int, Sprite> sprites;
 
-    STATIC_IL2CPP_BINDING(UnityEngine, Shader, app::Shader*, Find, (app::String* name));
     STATIC_IL2CPP_BINDING_OVERLOAD(UnityEngine, Object, app::Object*, Instantiate, (void* object), (UnityEngine:Object));
     STATIC_IL2CPP_BINDING(UnityEngine, Object, void, Destroy, (void* this_ptr));
     IL2CPP_BINDING(UnityEngine, Transform, void, set_parent, (app::Transform* this_ptr, app::Transform* parent));
@@ -66,6 +65,9 @@ namespace {
         GameObject::SetActive(go, true);
         return go;
     }
+
+    shaders::ShaderInfo pinfo;
+    shaders::ShaderInfo sinfo;
 
     //STATIC_IL2CPP_BINDING(RootMotion, LayerMaskExtensions, app::String*, MaskToString, (app::LayerMask original));
     STATIC_IL2CPP_BINDING(UnityEngine, LayerMask, app::String*, LayerToName, (int layer));
@@ -85,6 +87,16 @@ namespace {
             message_box->fields.TextBox->fields.styleCollection->fields.styles->vector[1]->fields.renderer);
         auto icon = icon_renderer->fields.Icons->fields.Icons->fields._items->vector[0]->fields.Icon;
         auto go = create_sprite(sprite, il2cpp::unity::get_children(icon)[0]);
+
+        auto renderer = il2cpp::unity::get_component<app::Renderer>(go, "UnityEngine", "MeshRenderer");
+        //shaders::make_material_unique(renderer);
+        
+        auto test = false;
+        if (test)
+        {
+            auto shader = shaders::Shader::Find(il2cpp::string_new("Hidden/UberShader/4B897D76B847170D884884FBA5CEBC13"));
+            shaders::set_shader(renderer, shader);
+        }
 
         auto order = il2cpp::unity::get_component(go, "", "UberShaderRuntimeRenderOrder");
         Object::Destroy(order);
@@ -192,10 +204,22 @@ namespace {
 
                     auto new_transform = il2cpp::unity::get_transform(new_obj);
                     auto transform = il2cpp::unity::get_transform(obj);
-                    auto parent = il2cpp::unity::get_parent(transform);
-                    Transform::set_parent(new_transform, parent);
+                    auto set_parent = false;
+                    if (set_parent)
+                    {
+                        auto parent = il2cpp::unity::get_parent(transform);
+                        auto position = Transform::get_position(transform);
+                        Transform::set_parent(new_transform, parent);
+                        Transform::set_position(new_transform, &position);
+                    }
+                    else
+                    {
+                        Transform::set_parent(new_transform, nullptr);
+                        app::Vector3 position{ 1469, -3999.9, -0.6 };
+                        Transform::set_position(new_transform, &position);
+                    }
+
                     auto pos = Transform::get_position(transform);
-                    Transform::set_position(new_transform, &pos);
                     pos.y += 4.0f;
                     Transform::set_position(transform, &pos);
                 }
@@ -203,6 +227,7 @@ namespace {
         }
     }
     
+    shaders::ShaderInfo ainfo;
     app::Vector4 shader_scale_and_offset{ 0, 0, 1, 1 };
     void update_game_object(Sprite& sprite)
     {
@@ -246,6 +271,7 @@ namespace {
             entry.texture_data->apply(renderer);
         }
 
+        ainfo = shaders::get_info(renderer);
         auto test = false;
         if (test)
             create_weird_copy();
@@ -299,8 +325,12 @@ namespace {
 
     void initialize()
     {
-        auto id = sprite_create(1965.410889f, -3890.324463f, 0, 0, 1, 1, Layer::Art, AnimationEndHandling::Freeze);
+        auto id = sprite_create(1469, -3995.9, -0.6, 0, 10, 10, Layer::Art, AnimationEndHandling::Freeze);
         sprite_animation_entry(id, 0, 0, 0, 0, 0, 0, 1, L"opher:0");
+        sprite_set_active(id, true);
+
+        id = sprite_create(1476, -3995.9, -0.6, 0, 10, 10, Layer::Art, AnimationEndHandling::Freeze);
+        sprite_animation_entry(id, 0, 0, 0, 0, 0, 0, 1, L"opher:3");
         sprite_set_active(id, true);
     }
 
